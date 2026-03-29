@@ -1,0 +1,4 @@
+websockets
+mega.py
+asyncio
+python-dotenv
