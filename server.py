@@ -5,15 +5,16 @@ import os
 from mega import Mega
 from dotenv import load_dotenv
 
+# Load env variables FIRST
 load_dotenv()
-
 EMAIL = os.getenv("MEGA_EMAIL")
 PASSWORD = os.getenv("MEGA_PASSWORD")
 
+# MEGA login
 mega = Mega()
 m = mega.login(EMAIL, PASSWORD)
 
-# fake ID check (you will replace with MEGA file later)
+# fake ID check (replace with your logic)
 VALID_IDS = ["YAVE123"]
 
 def get_all_files():
@@ -31,6 +32,7 @@ def get_users():
                     users.append(cv['a']['n'])
     return users
 
+# Unified websocket handler
 async def handler(ws):
     async for msg in ws:
         data = json.loads(msg)
@@ -49,18 +51,18 @@ async def handler(ws):
 
         elif data["action"] == "files":
             files = get_all_files()
-            result = []
-
-            for k, v in files.items():
-                name = v['a'].get('n')
-                if name:
-                    result.append(name)
-
+            result = [v['a'].get('n') for k,v in files.items() if v['a'].get('n')]
             await ws.send(json.dumps({
                 "type": "files",
                 "list": result
             }))
 
-start = websockets.serve(handler, "0.0.0.0", 3000)
-asyncio.get_event_loop().run_until_complete(start)
-asyncio.get_event_loop().run_forever()
+async def main():
+    # Use Railway PORT if provided
+    PORT = int(os.environ.get("PORT", 3000))
+    async with websockets.serve(handler, "0.0.0.0", PORT):
+        print(f"WebSocket server running on port {PORT}")
+        await asyncio.Future()  # run forever
+
+if __name__ == "__main__":
+    asyncio.run(main())
