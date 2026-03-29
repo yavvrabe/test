@@ -1,4 +1,4 @@
-websockets
 mega.py
-asyncio
+tenacity
+websockets
 python-dotenv
