@@ -1,6 +1,4 @@
-mega.py
-tenacity
-websockets
-python-dotenv
 Flask==2.3.6
 Flask-Cors==4.0.2
+mega.py==0.4.0
+python-dotenv==1.0.0
