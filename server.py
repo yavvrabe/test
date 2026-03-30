@@ -1,68 +1,45 @@
-import asyncio
-import websockets
-import json
-import os
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 from mega import Mega
+import os
 from dotenv import load_dotenv
 
-# Load env variables FIRST
+# load .env
 load_dotenv()
-EMAIL = os.getenv("MEGA_EMAIL")
-PASSWORD = os.getenv("MEGA_PASSWORD")
 
-# MEGA login
-mega = Mega()
-m = mega.login(EMAIL, PASSWORD)
+app = Flask(__name__)
+CORS(app)
 
-# fake ID check (replace with your logic)
-VALID_IDS = ["YAVE123"]
+MEGA_EMAIL = os.getenv("MEGA_EMAIL")
+MEGA_PASSWORD = os.getenv("MEGA_PASSWORD")
+MEGA_FILE = "Fatch/register.slfx"
 
-def get_all_files():
-    return m.get_files()
+def get_allowed_ids():
+    try:
+        mega = Mega()
+        m = mega.login(MEGA_EMAIL, MEGA_PASSWORD)
+        # download the register.slfx content as text
+        file = m.find(MEGA_FILE)
+        if not file:
+            print("File not found on Mega:", MEGA_FILE)
+            return []
+        content = m.download(file, dest=None).read().decode()
+        return [line.strip() for line in content.splitlines() if line.strip()]
+    except Exception as e:
+        print("Error fetching register.slfx from Mega:", e)
+        return []
 
-def get_users():
-    files = get_all_files()
-    users = []
+@app.route("/login", methods=["POST"])
+def login():
+    data = request.get_json()
+    user_id = data.get("id", "").strip()
 
-    for k, v in files.items():
-        if v['a'].get('n') == "Data":
-            parent = k
-            for ck, cv in files.items():
-                if cv['p'] == parent:
-                    users.append(cv['a']['n'])
-    return users
+    allowed_ids = get_allowed_ids()
 
-# Unified websocket handler
-async def handler(ws):
-    async for msg in ws:
-        data = json.loads(msg)
-
-        if data["action"] == "auth":
-            if data["id"] in VALID_IDS:
-                await ws.send(json.dumps({"type": "auth", "ok": True}))
-            else:
-                await ws.send(json.dumps({"type": "auth", "ok": False}))
-
-        elif data["action"] == "users":
-            await ws.send(json.dumps({
-                "type": "users",
-                "list": get_users()
-            }))
-
-        elif data["action"] == "files":
-            files = get_all_files()
-            result = [v['a'].get('n') for k,v in files.items() if v['a'].get('n')]
-            await ws.send(json.dumps({
-                "type": "files",
-                "list": result
-            }))
-
-async def main():
-    # Use Railway PORT if provided
-    PORT = int(os.environ.get("PORT", 3000))
-    async with websockets.serve(handler, "0.0.0.0", PORT):
-        print(f"WebSocket server running on port {PORT}")
-        await asyncio.Future()  # run forever
+    if user_id in allowed_ids:
+        return jsonify({"success": True, "message": "Access Granted"})
+    else:
+        return jsonify({"success": False, "message": "Invalid ID"})
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    app.run(host="0.0.0.0", port=8080)
