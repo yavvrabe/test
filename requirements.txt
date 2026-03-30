@@ -2,3 +2,5 @@ mega.py
 tenacity
 websockets
 python-dotenv
+Flask==2.3.6
+Flask-Cors==4.0.2
