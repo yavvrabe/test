@@ -50,18 +50,18 @@ def get_allowed_ids():
 
 # 🔐 Login route
 @app.route('/login', methods=['POST'])
-@app.route('/')
-def home():
-    return "Yave server is running 🔥"
 def login():
+    print("📩 Login request received")
+
     try:
         data = request.get_json()
-        if not data:
-            return jsonify({"success": False, "msg": "No data"}), 400
+        print("DATA:", data)
 
         user_id = data.get("id", "").strip()
+        print("USER ID:", user_id)
 
         allowed = get_allowed_ids()
+        print("ALLOWED IDS:", allowed)
 
         if user_id in allowed:
             return jsonify({"success": True})
@@ -69,8 +69,12 @@ def login():
         return jsonify({"success": False, "msg": "Invalid ID"}), 401
 
     except Exception as e:
-        print("❌ Login error:", e)
+        print("❌ ERROR:", e)
         return jsonify({"success": False, "msg": "Server error"}), 500
+@app.route('/')
+def home():
+    return "Yave server is running 🔥"
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
