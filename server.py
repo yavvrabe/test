@@ -9,21 +9,34 @@ load_dotenv()
 
 MEGA_EMAIL = os.getenv("MEGA_EMAIL")
 MEGA_PASSWORD = os.getenv("MEGA_PASSWORD")
-
 mega = Mega()
-m = mega.login(MEGA_EMAIL, MEGA_PASSWORD)
+try:
+    m = mega.login(MEGA_EMAIL, MEGA_PASSWORD)
+    print("✅ Mega login success")
+except Exception as e:
+    print("❌ Mega login failed:", e)
+    m = None
 
 app = Flask(__name__)
 CORS(app)
 
 # Read allowed IDs from your private file
-def get_allowed_ids():
-    file = m.find('register.slfx')[0]  # make sure the file exists
-    download = m.download(file, dest='register.slfx.tmp')
-    with open('register.slfx.tmp', 'r') as f:
-        ids = [line.strip() for line in f if line.strip()]
-    os.remove('register.slfx.tmp')
-    return ids
+ddef get_allowed_ids():
+    try:
+        if not m:
+            return []
+
+        file = m.find('register.slfx')[0]
+        m.download(file, 'register.slfx.tmp')
+
+        with open('register.slfx.tmp', 'r') as f:
+            ids = [line.strip() for line in f if line.strip()]
+
+        return ids
+
+    except Exception as e:
+        print("❌ Error reading Mega file:", e)
+        return []
 
 @app.route('/login', methods=['POST'])
 def login():
