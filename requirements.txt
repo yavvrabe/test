@@ -1,5 +1,5 @@
 Flask>=2.3.0,<3.0
 gunicorn
 Flask-Cors==4.0.2
-mega.py==0.8.0
 python-dotenv==1.0.0
+git+https://github.com/odwyersoftware/mega.py.git
