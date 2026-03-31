@@ -51,8 +51,8 @@ def get_allowed_ids():
 
         print("✅ Found file:", target)
 
-        m.download(target, 'register.slfx.tmp')
-
+        file_data = files[target]   # get the full file object
+        m.download(file_data, 'register.slfx.tmp')
         with open('register.slfx.tmp', 'r') as f:
             ids = [line.strip() for line in f if line.strip()]
 
