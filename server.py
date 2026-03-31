@@ -29,19 +29,27 @@ def get_allowed_ids():
             print("❌ Mega not connected")
             return []
 
-        files = m.get_files()  # 🔥 GET ALL FILES
+        files = m.get_files()
+
+        print("FILES TYPE:", type(files))
+        print("FILES SAMPLE:", list(files)[:3])
 
         target = None
 
-        for f in files:
-            if isinstance(files[f], dict):
-                if files[f].get('a', {}).get('n') == 'register.slfx':
-                    target = f
+        for key, value in files.items():
+            try:
+                name = value.get('a', {}).get('n')
+                if name == 'register.slfx':
+                    target = key
                     break
+            except:
+                continue
 
         if not target:
             print("❌ register.slfx not found")
             return []
+
+        print("✅ Found file:", target)
 
         m.download(target, 'register.slfx.tmp')
 
@@ -50,12 +58,13 @@ def get_allowed_ids():
 
         os.remove('register.slfx.tmp')
 
+        print("✅ IDS LOADED:", ids)
+
         return ids
 
     except Exception as e:
-        print("❌ Error reading Mega file:", e)
+        print("❌ FINAL ERROR:", e)
         return []
-
 # 🔐 Login route
 @app.route('/login', methods=['POST'])
 def login():
