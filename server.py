@@ -4,12 +4,14 @@ from mega import Mega
 import os
 from dotenv import load_dotenv
 
-# load .env
+# load env
 load_dotenv()
 
 MEGA_EMAIL = os.getenv("MEGA_EMAIL")
 MEGA_PASSWORD = os.getenv("MEGA_PASSWORD")
+
 mega = Mega()
+
 try:
     m = mega.login(MEGA_EMAIL, MEGA_PASSWORD)
     print("✅ Mega login success")
@@ -20,17 +22,25 @@ except Exception as e:
 app = Flask(__name__)
 CORS(app)
 
-# Read allowed IDs from your private file
-ddef get_allowed_ids():
+# 🔑 Get IDs safely
+def get_allowed_ids():
     try:
         if not m:
+            print("❌ Mega not connected")
             return []
 
-        file = m.find('register.slfx')[0]
+        files = m.find('register.slfx')
+        if not files:
+            print("❌ register.slfx not found")
+            return []
+
+        file = files[0]
         m.download(file, 'register.slfx.tmp')
 
         with open('register.slfx.tmp', 'r') as f:
             ids = [line.strip() for line in f if line.strip()]
+
+        os.remove('register.slfx.tmp')  # clean up
 
         return ids
 
@@ -38,14 +48,26 @@ ddef get_allowed_ids():
         print("❌ Error reading Mega file:", e)
         return []
 
+# 🔐 Login route
 @app.route('/login', methods=['POST'])
 def login():
-    data = request.json
-    user_id = data.get("id")
-    allowed = get_allowed_ids()
-    if user_id in allowed:
-        return jsonify({"success": True})
-    return jsonify({"success": False, "msg": "Invalid ID"}), 401
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"success": False, "msg": "No data"}), 400
+
+        user_id = data.get("id", "").strip()
+
+        allowed = get_allowed_ids()
+
+        if user_id in allowed:
+            return jsonify({"success": True})
+
+        return jsonify({"success": False, "msg": "Invalid ID"}), 401
+
+    except Exception as e:
+        print("❌ Login error:", e)
+        return jsonify({"success": False, "msg": "Server error"}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
