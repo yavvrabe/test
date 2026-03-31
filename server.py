@@ -50,6 +50,9 @@ def get_allowed_ids():
 
 # 🔐 Login route
 @app.route('/login', methods=['POST'])
+@app.route('/')
+def home():
+    return "Yave server is running 🔥"
 def login():
     try:
         data = request.get_json()
