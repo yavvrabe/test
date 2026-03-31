@@ -29,18 +29,26 @@ def get_allowed_ids():
             print("❌ Mega not connected")
             return []
 
-        files = m.find('register.slfx')
-        if not files:
+        files = m.get_files()  # 🔥 GET ALL FILES
+
+        target = None
+
+        for f in files:
+            if isinstance(files[f], dict):
+                if files[f].get('a', {}).get('n') == 'register.slfx':
+                    target = f
+                    break
+
+        if not target:
             print("❌ register.slfx not found")
             return []
 
-        file = files[0]
-        m.download(file, 'register.slfx.tmp')
+        m.download(target, 'register.slfx.tmp')
 
         with open('register.slfx.tmp', 'r') as f:
             ids = [line.strip() for line in f if line.strip()]
 
-        os.remove('register.slfx.tmp')  # clean up
+        os.remove('register.slfx.tmp')
 
         return ids
 
