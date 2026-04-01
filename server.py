@@ -41,11 +41,19 @@ def load_ids_from_mega():
         target_key = None
 
         for key, meta in files.items():
-            if isinstance(meta, dict):
-                name = meta.get('a', {}).get('n')
-                if name == 'register.slfx':
-                    target_key = key
-                    break
+        # skip invalid entries
+        if not isinstance(meta, dict):
+        continue
+
+        # skip if no attributes
+        attrs = meta.get('a')
+        if not isinstance(attrs, dict):
+        continue
+
+        name = attrs.get('n')
+        if name == 'register.slfx':
+        target_key = key
+        break
 
         if not target_key:
             print("❌ register.slfx not found")
