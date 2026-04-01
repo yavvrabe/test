@@ -26,9 +26,11 @@ def refresh_allowed_ids():
 
             files = m.get_files()
             target_key = None
+
             for key, meta in files.items():
-                if isinstance(meta, dict):
-                    name = meta.get('a', {}).get('n')
+                # Only proceed if meta is a dict and has 'a'
+                if isinstance(meta, dict) and 'a' in meta and isinstance(meta['a'], dict):
+                    name = meta['a'].get('n')
                     if name == 'register.slfx':
                         target_key = key
                         break
@@ -44,6 +46,7 @@ def refresh_allowed_ids():
 
         except Exception as e:
             print("❌ Error refreshing Mega IDs:", e)
+
         time.sleep(600)  # refresh every 10 minutes
 
 # start background thread to refresh IDs
