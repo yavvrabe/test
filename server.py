@@ -3,8 +3,6 @@ from flask_cors import CORS
 from mega import Mega
 import os
 from dotenv import load_dotenv
-import threading
-import time
 
 # Load .env
 load_dotenv()
@@ -14,7 +12,6 @@ MEGA_PASSWORD = os.getenv("MEGA_PASSWORD")
 
 mega = Mega()
 
-# login to Mega once
 try:
     m = mega.login(MEGA_EMAIL, MEGA_PASSWORD)
     print("✅ Mega login success")
@@ -25,79 +22,70 @@ except Exception as e:
 app = Flask(__name__)
 CORS(app)
 
-# Cache allowed IDs
-allowed_ids_cache = []
-
-def load_ids_from_mega():
-    """Download register.slfx from Mega and update cache."""
-    global allowed_ids_cache
-    if not m:
-        print("❌ Mega not connected")
-        allowed_ids_cache = []
-        return
-
+# 🔑 Safely get allowed IDs from Mega
+def get_allowed_ids():
     try:
+        if not m:
+            print("❌ Mega not connected")
+            return []
+
         files = m.get_files()
+        print("FILES TYPE:", type(files))
+        print("FILES SAMPLE:", list(files)[:3])
+
         target_key = None
 
+        # Loop safely through files
         for key, meta in files.items():
-        # skip invalid entries
-        if not isinstance(meta, dict):
-        continue
+            if not isinstance(meta, dict):
+                continue
 
-        # skip if no attributes
-        attrs = meta.get('a')
-        if not isinstance(attrs, dict):
-        continue
+            attrs = meta.get('a')
+            if not isinstance(attrs, dict):
+                continue
 
-        name = attrs.get('n')
-        if name == 'register.slfx':
-        target_key = key
-        break
+            name = attrs.get('n')
+            if name == 'register.slfx':
+                target_key = key
+                break
 
         if not target_key:
             print("❌ register.slfx not found")
-            allowed_ids_cache = []
-            return
+            return []
 
         print("✅ Found file:", target_key)
 
-        # Download temp
-        m.download(target_key, 'register.slfx.tmp')
+        # Download safely using the file node
+        m.download(files[target_key], 'register.slfx.tmp')
 
         # Read IDs
         with open('register.slfx.tmp', 'r') as f:
-            allowed_ids_cache = [line.strip() for line in f if line.strip()]
+            ids = [line.strip() for line in f if line.strip()]
 
-        os.remove('register.slfx.tmp')
-        print("✅ IDS LOADED:", allowed_ids_cache)
+        os.remove('register.slfx.tmp')  # cleanup
+        print("✅ IDS LOADED:", ids)
+
+        return ids
 
     except Exception as e:
         print("❌ FINAL ERROR:", e)
-        allowed_ids_cache = []
-
-# Load IDs on server start
-load_ids_from_mega()
-
-# Optional: refresh cache every 5 minutes
-def refresh_cache_loop():
-    while True:
-        time.sleep(300)  # 5 minutes
-        print("🔄 Refreshing allowed IDs cache from Mega...")
-        load_ids_from_mega()
-
-threading.Thread(target=refresh_cache_loop, daemon=True).start()
+        return []
 
 # 🔐 Login route
 @app.route('/login', methods=['POST'])
 def login():
+    print("📩 Login request received")
     try:
-        data = request.get_json() or {}
-        user_id = data.get("id", "").strip()
-        print("📩 Login attempt:", user_id)
-        print("ALLOWED IDS:", allowed_ids_cache)
+        data = request.get_json()
+        print("DATA:", data)
 
-        if user_id in allowed_ids_cache:
+        user_id = data.get("id", "").strip()
+        print("USER ID:", user_id)
+
+        allowed = get_allowed_ids()
+        print("ALLOWED IDS:", allowed)
+
+        if user_id in allowed:
             return jsonify({"success": True})
 
         return jsonify({"success": False, "msg": "Invalid ID"}), 401
@@ -106,9 +94,11 @@ def login():
         print("❌ ERROR:", e)
         return jsonify({"success": False, "msg": "Server error"}), 500
 
+# 🏠 Home route
 @app.route('/')
 def home():
     return "Yave server is running 🔥"
 
 if __name__ == '__main__':
+    # Debug off for production on Railway
     app.run(host='0.0.0.0', port=8080)
