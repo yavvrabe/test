@@ -30,36 +30,34 @@ def get_allowed_ids():
             return []
 
         files = m.get_files()
-
         print("FILES TYPE:", type(files))
         print("FILES SAMPLE:", list(files)[:3])
 
-        target = None
+        target_key = None
 
-        for key, value in files.items():
-            try:
-                name = value.get('a', {}).get('n')
+        # loop safely through files
+        for key, meta in files.items():
+            if isinstance(meta, dict):
+                name = meta.get('a', {}).get('n')
                 if name == 'register.slfx':
-                    target = key
+                    target_key = key
                     break
-            except:
-                continue
 
-        if not target:
+        if not target_key:
             print("❌ register.slfx not found")
             return []
 
-        print("✅ Found file:", target)
+        print("✅ Found file:", target_key)
 
-        file_data = files[target]   # get the full file object
-        m.download(file_data, 'register.slfx.tmp')
+        # download safely
+        m.download(target_key, 'register.slfx.tmp')
+
+        # read IDs
         with open('register.slfx.tmp', 'r') as f:
             ids = [line.strip() for line in f if line.strip()]
 
-        os.remove('register.slfx.tmp')
-
+        os.remove('register.slfx.tmp')  # cleanup
         print("✅ IDS LOADED:", ids)
-
         return ids
 
     except Exception as e:
